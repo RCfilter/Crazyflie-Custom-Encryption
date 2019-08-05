@@ -46,6 +46,7 @@ import struct
 import sys
 import threading
 import ctypes
+import os
 
 import cflib.drivers.crazyradio as crazyradio
 from .crtpstack import CRTPPacket
@@ -57,7 +58,9 @@ key_py = [int('1b4f', 16), int('9d87', 16), int('0165', 16), int('10fd', 16), in
 
 key = (ctypes.c_ushort*5)(*key_py)
 
-pres = ctypes.CDLL('./libpres.so')
+home = os.getenv("HOME")
+
+pres = ctypes.CDLL(home +'/projects/crazyflie-lib-python/cflib/crtp/libpres.so')
 
 encrypt = False
 
@@ -268,10 +271,6 @@ class RadioDriver(CRTPDriver):
             except queue.Empty:
                 return None
         
-        if len(pk._data) > 0 and not encrypt:
-            print('\n---Data---\n')
-            print(pk._data)
-            print(len(pk._data))
         t = bytes(pk._data)
         d = bytes()
         if len(t) > 24:
@@ -289,18 +288,15 @@ class RadioDriver(CRTPDriver):
         else:
             dec = t
             pk._data = dec + d
-        
-        if len(pk._data) > 0:
-            if encrypt:
-                print('\n...Message Received...\n',pk._data)
-        else:
+        if len(pk._data) == 0:
             return None
+        if not encrypt and pk._data[:18] == b'Bitcraze Crazyflie':
+            encrypt = True
         return pk
 	
     def send_packet(self, pk):
         """ Send the packet pk though the link """
         global encrypt
-        
         if encrypt and pk.size < 24:
             pk.size = 24
         t = bytes(pk._data)
@@ -323,15 +319,8 @@ class RadioDriver(CRTPDriver):
             pres.Encrypt(t3, key)
             dec = list(t1) + list(t2) + list(t3)
             pk._data = bytearray(dec) + d
-            #print('\n...Sending...\n')
-            #print(pk._data)
         else:
             pk._data = t + d
-        #print('\n...Sending...')
-        
-        if pk._data == b'\x03\x05\n':
-            encrypt = True
-        #print("SEND", pk._data)
         try:
             self.out_queue.put(pk, True, 2)
         except queue.Full:

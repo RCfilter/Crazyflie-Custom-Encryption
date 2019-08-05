@@ -290,10 +290,7 @@ class RadioDriver(CRTPDriver):
         else:
             dec = t
             pk._data = dec + d
-        if len(pk._data) > 0:
-            if encrypt:
-                print('\n...Message Received...\n',pk._data)
-        else:
+        if len(pk._data) == 0:
             return None
         return pk
 	

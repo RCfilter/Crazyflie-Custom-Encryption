@@ -280,9 +280,7 @@ class RadioDriver(CRTPDriver):
         else:
             dec = t
         pk._data = dec + d
-        if len(pk._data) > 0:
-            print('\n...Message Received...\n',pk._data)
-        else:
+        if len(pk._data) == 0:
             return None
         return pk
 	
@@ -308,10 +306,8 @@ class RadioDriver(CRTPDriver):
             pk._data = enc + d
         else:
             pk._data = t + d
-        print('\n...Sending...')
         if pk._data == b'\x03\x05\n':
-            encrypt = True
-        print("SEND", pk._data) 
+            encrypt = True 
         try:
             self.out_queue.put(pk, True, 2)
         except queue.Full:

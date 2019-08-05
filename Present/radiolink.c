@@ -75,6 +75,7 @@ static uint32_t lastPacketTick;
 static uint16_t key[5] = {(uint16_t) 0x1b4f, (uint16_t) 0x9d87, (uint16_t) 0x0165, (uint16_t) 0x10fd, (uint16_t) 0xabcd};
 
 bool match = false;
+uint8_t bytes[]  = {(uint8_t)'B', (uint8_t)'i', (uint8_t)'t', (uint8_t)'c', (uint8_t)'r', (uint8_t)'a', (uint8_t)'z', (uint8_t)'e', (uint8_t)' ', (uint8_t)'C', (uint8_t)'r', (uint8_t)'a', (uint8_t)'z', (uint8_t)'y', (uint8_t)'f', (uint8_t)'l', (uint8_t)'i', (uint8_t)'e'};
 
 static bool radiolinkIsConnected(void) {
   return (xTaskGetTickCount() - lastPacketTick) < M2T(RADIO_ACTIVITY_TIMEOUT_MS);
@@ -192,20 +193,6 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
 {
   if (xQueueReceive(crtpPacketDelivery, p, M2T(100)) == pdTRUE)
   {
-	uint8_t bytes[]  = {(uint8_t)0x03, (uint8_t)0x05, (uint8_t)'\n'};
-
-	if(!match) {
-		bool m = true;
-		for(int i = 0; i<3; i++) {
-			if(p->data[i] != bytes[i])
-				m = false;
-		}
-		if(m) {
-			match = true;
-		}
-		return 0;
-	}
-
 	uint8_t data[24];
 	memcpy(data, &p->data[0], 24);
 	for(int i = 0; i<3; i++) {
@@ -224,6 +211,14 @@ static int radiolinkSendCRTPPacket(CRTPPacket *p)
   ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
 
   if(!match) {
+	    bool m = true;
+		for(int i = 0; i<18; i++) {
+			if(p->data[i] != bytes[i])
+				m = false;
+		}
+		if(m) {
+			match = true;
+		}
 	  slp.type = SYSLINK_RADIO_RAW;
 	  slp.length = p->size + 1;
 	  memcpy(slp.data, &p->header, p->size + 1);
