@@ -1,7 +1,7 @@
 #!/bin/bash
 
 alg=$1
-d="~/Desktop/projects/"
+d=$HOME"/Desktop/projects/"
 if [ "$2" != "" ]; then
   echo "Custom directory $2 Selected"
   d=$2
