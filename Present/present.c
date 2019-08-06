@@ -1,9 +1,4 @@
-/*
- * This file has been modified by the Wireless Innovation and Cybersecurity Lab of George Mason University
- * This project was overseen by Dr. Kai Zeng from the Department of Electrical and Computer Engineering
- * Contributing Members: David Rudo, Brandon Fogg, Thomas Lu, Matthew Chang, Yaqi He, Shrinath Iyer
- */
-
+//Note to David: added the line "u16* state = v" to each method, commented out PRINT, also commented out main
 
 //#define PRINT
 #include "present.h"
@@ -23,45 +18,9 @@
 }
 #endif
 
-//precondition: state must be 8 element array, aKey 5 element
-//postcondition: state is encrypted
- void Encrypt(uint8_t *state, const u16 *aKey)
+ void Encrypt(void *v, const u16 *aKey)
 {
-    u16 nState[4];
-
-    for(int i = 0; i < 8; i += 2)
-        nState[i/2] = 256 * (u16) state[i] + (u16) state[i+1];
-
-    EncryptHelper(nState, aKey);
-
-    for(int i = 0; i < 4; i++)
-    {
-        state[2*i] = (uint8_t)(nState[i] / 256);
-        state[2*i+1] = (uint8_t)(nState[i] % 256);
-    }
-}
-
-//precondition: state must be 8 element array, aKey 5 element
-//postcondition: state is encrypted
- void Decrypt(uint8_t *state, const u16 *aKey)
-{
-    u16 nState[4];
-
-    for(int i = 0; i < 8; i += 2)
-        nState[i/2] = 256 * (u16) state[i] + (u16) state[i+1];
-
-    DecryptHelper(nState, aKey);
-
-    for(int i = 0; i < 4; i++)
-    {
-        state[2*i] = (uint8_t)(nState[i] / 256);
-        state[2*i+1] = (uint8_t)(nState[i] % 256);
-    }
-
-}
-
- void EncryptHelper(u16 *state, const u16 *aKey)
-{
+    u16* state = v;
 // counter
 	u16 round=1;
 // Variables sBox
@@ -176,8 +135,9 @@
 }
 
 
- void DecryptHelper(u16 *state, const u16 *aKey)
+ void Decrypt(void *v, const u16 *aKey)
 {
+    u16* state = v;
 // counter
 	u16 round;
 // Variables sBox

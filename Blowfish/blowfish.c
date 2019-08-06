@@ -15,20 +15,23 @@ You should have received a copy of the GNU Lesser General Public
 License along with this library; if not, write to the Free Software
 Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
+
+
+
 COMMENTS ON USING THIS CODE:
 
 Normal usage is as follows:
    [1] Allocate a BLOWFISH_CTX.  (It may be too big for the stack.)
    [2] Call Blowfish_Init with a pointer to your BLOWFISH_CTX, a pointer to
-       the key, and the number of bytes in the key.
+	   the key, and the number of bytes in the key.
    [3] To encrypt a 64-bit block, call Blowfish_Encrypt with a pointer to
-       BLOWFISH_CTX, a pointer to the 32-bit left half of the plaintext
+	   BLOWFISH_CTX, a pointer to the 32-bit left half of the plaintext
 	   and a pointer to the 32-bit right half.  The plaintext will be
 	   overwritten with the ciphertext.
    [4] Decryption is the same as encryption except that the plaintext and
-       ciphertext are reversed.
+	   ciphertext are reversed.
 
-Warning #1:  The code does not check key lengths. (Caveat encryptor.) 
+Warning #1:  The code does not check key lengths. (Caveat encryptor.)
 Warning #2:  Beware that Blowfish keys repeat such that "ab" = "abab".
 Warning #3:  It is normally a good idea to zeroize the BLOWFISH_CTX before
   freeing it.
@@ -38,25 +41,19 @@ Warning #4:  Endianness conversions are the responsibility of the caller.
 Warning #5:  Make sure to use a reasonable mode of operation for your
   application.  (If you don't know what CBC mode is, see Warning #7.)
 Warning #6:  This code is susceptible to timing attacks.
-Warning #7:  Security engineering is risky and non-intuitive.  Have someone 
+Warning #7:  Security engineering is risky and non-intuitive.  Have someone
   check your work.  If you don't know what you are doing, get help.
 
 
 This is code is fast enough for most applications, but is not optimized for
 speed.
 
-If you require this code under a license other than LGPL, please ask.  (I 
-can be located using your favorite search engine.)  Unfortunately, I do not 
-have time to provide unpaid support for everyone who uses this code.  
+If you require this code under a license other than LGPL, please ask.  (I
+can be located using your favorite search engine.)  Unfortunately, I do not
+have time to provide unpaid support for everyone who uses this code.
 
-                                             -- Paul Kocher
+											 -- Paul Kocher
 */
-
-/*
- * This file has been modified by the Wireless Innovation and Cybersecurity Lab of George Mason University
- * This project was overseen by Dr. Kai Zeng from the Department of Electrical and Computer Engineering
- * Contributing Members: David Rudo, Brandon Fogg, Thomas Lu, Matthew Chang, Yaqi He, Shrinath Iyer
- */
 
 
 #include "blowfish.h"
@@ -352,39 +349,28 @@ static uint32_t F(BLOWFISH_CTX* ctx, uint32_t x) {
 	return y;
 }
 
-void Encrypt(BLOWFISH_CTX* ctx, uint8_t* x)
+void Encrypt(BLOWFISH_CTX* ctx, void* x)
 {
-	uint32_t xl;
-	uint32_t xr;
-	xl = 16777216 * (uint32_t)x[3] + 65536 * (uint32_t)x[2] + 256 * (uint32_t)x[1] + (uint32_t)x[0];
-	xr = 16777216 * (uint32_t)x[7] + 65536 * (uint32_t)x[6] + 256 * (uint32_t)x[5] + (uint32_t)x[4];
+	uint32_t* v = x;
+	uint32_t xl = v[0];
+	uint32_t xr = v[1];
+
 	Blowfish_Encrypt(ctx, &xl, &xr);
-	x[0] = xl % 256;
-	x[1] = xl % 65536 / 256;
-	x[2] = xl % 16777216 / 65536;
-	x[3] = xl / 16777216;
 
-	x[0 + 4] = xr % 256;
-	x[1 + 4] = xr % 65536 / 256;
-	x[2 + 4] = xr % 16777216 / 65536;
-	x[3 + 4] = xr / 16777216;
+	v[0] = xl;
+	v[1] = xr;
 }
-void Decrypt(BLOWFISH_CTX* ctx, uint8_t* x)
+void Decrypt(BLOWFISH_CTX* ctx, void* x)
 {
-	uint32_t xl;
-	uint32_t xr;
-	xl = 16777216 * (uint32_t)x[3] + 65536 * (uint32_t)x[2] + 256 * (uint32_t)x[1] + (uint32_t)x[0];
-	xr = 16777216 * (uint32_t)x[7] + 65536 * (uint32_t)x[6] + 256 * (uint32_t)x[5] + (uint32_t)x[4];
-	Blowfish_Decrypt(ctx, &xl, &xr);
-	x[0] = xl % 256;
-	x[1] = xl % 65536 / 256;
-	x[2] = xl % 16777216 / 65536;
-	x[3] = xl / 16777216;
 
-	x[0 + 4] = xr % 256;
-	x[1 + 4] = xr % 65536 / 256;
-	x[2 + 4] = xr % 16777216 / 65536;
-	x[3 + 4] = xr / 16777216;
+	uint32_t* v = x;
+	uint32_t xl = v[0];
+	uint32_t xr = v[1];
+
+	Blowfish_Decrypt(ctx, &xl, &xr);
+
+	v[0] = xl;
+	v[1] = xr;
 }
 
 void Blowfish_Encrypt(BLOWFISH_CTX* ctx, uint32_t* xl, uint32_t* xr) {

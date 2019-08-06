@@ -22,11 +22,6 @@ See blowfish.c for more information about this file.
 #include <stdio.h>
 #include <stdint.h>
 
-/*
- * This file has been modified by the Wireless Innovation and Cybersecurity Lab of George Mason University
- * This project was overseen by Dr. Kai Zeng from the Department of Electrical and Computer Engineering
- * Contributing Members: David Rudo, Brandon Fogg, Thomas Lu, Matthew Chang, Yaqi He, Shrinath Iyer
- */
 
 typedef struct {
 	uint32_t P[16 + 2];
@@ -34,8 +29,8 @@ typedef struct {
 } BLOWFISH_CTX;
 
 void Blowfish_Init(BLOWFISH_CTX* ctx, uint8_t* key, int32_t keyLen);
-void Encrypt(BLOWFISH_CTX* ctx, uint8_t* x);
-void Decrypt(BLOWFISH_CTX* ctx, uint8_t* x);
+void Encrypt(BLOWFISH_CTX* ctx, void* x);
+void Decrypt(BLOWFISH_CTX* ctx, void* x);
 void Blowfish_Encrypt(BLOWFISH_CTX* ctx, uint32_t* xl, uint32_t* xr);
 void Blowfish_Decrypt(BLOWFISH_CTX* ctx, uint32_t* xl, uint32_t* xr);
 
