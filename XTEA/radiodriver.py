@@ -46,7 +46,7 @@ import struct
 import sys
 import threading
 import ctypes
-
+import os
 
 import cflib.drivers.crazyradio as crazyradio
 from .crtpstack import CRTPPacket
@@ -58,7 +58,9 @@ key_py = [int('1b4f9d87', 16), int('016510fd', 16), int('abcd16af', 16), int('e9
 
 key = (ctypes.c_uint*4)(*key_py)
 
-tea = ctypes.CDLL('./libxtea.so')
+home = os.getenv("HOME")
+
+tea = ctypes.CDLL(home +'/projects/crazyflie-lib-python/cflib/crtp/libxtea.so')
 
 encrypt = False
 
