@@ -28,6 +28,8 @@
  * This file has been modified by the Wireless Innovation and Cybersecurity Lab of George Mason University 
  * This project was overseen by Dr. Kai Zeng from the Department of Electrical and Computer Engineering  
  * Contributing Members: David Rudo, Brandon Fogg, Thomas Lu, Matthew Chang, Yaqi He, Shrinath Iyer 
+ * 
+ * Updated by the Secure Swarm UAV Systems team for use in Senior Advanced Design Project
  */
 
 #include <string.h>
@@ -168,18 +170,18 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   {
     slp->length--; // Decrease to get CRTP size.
     xQueueSend(crtpPacketDelivery, &slp->length, 0);
-    ledseqRun(LINK_LED, seq_linkup);
+    ledseqRun(LINK_LED, seq_linkUp);
     // If a radio packet is received, one can be sent
     if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)
     {
-      ledseqRun(LINK_DOWN_LED, seq_linkup);
+      ledseqRun(LINK_DOWN_LED, seq_linkUp);
       syslinkSendPacket(&txPacket);
     }
   } else if (slp->type == SYSLINK_RADIO_RAW_BROADCAST)
   {
     slp->length--; // Decrease to get CRTP size.
     xQueueSend(crtpPacketDelivery, &slp->length, 0);
-    ledseqRun(LINK_LED, seq_linkup);
+    ledseqRun(LINK_LED, seq_linkUp);
     // no ack for broadcasts
   } else if (slp->type == SYSLINK_RADIO_RSSI)
 	{
