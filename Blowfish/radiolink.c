@@ -32,6 +32,7 @@
  * Updated by the Secure Swarm UAV Systems team for use in Senior Advanced Design Project
  */
 
+
 #include <string.h>
 #include <stdint.h>
 
@@ -50,18 +51,22 @@
 #include "led.h"
 #include "ledseq.h"
 #include "queuemonitor.h"
+#include "static_mem.h"
+#include "cfassert.h"
 
 #include "blowfish.h"
 
-//#include "../init/main.c"
-
 #define RADIOLINK_TX_QUEUE_SIZE (1)
+#define RADIOLINK_CRTP_QUEUE_SIZE (5)
 #define RADIO_ACTIVITY_TIMEOUT_MS (1000)
 
-
+#define RADIOLINK_P2P_QUEUE_SIZE (5)
 
 static xQueueHandle  txQueue;
+STATIC_MEM_QUEUE_ALLOC(txQueue, RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
+
 static xQueueHandle crtpPacketDelivery;
+STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, RADIOLINK_CRTP_QUEUE_SIZE, sizeof(CRTPPacket));
 
 static bool isInit;
 
@@ -71,11 +76,14 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
 
 //Local RSSI variable used to enable logging of RSSI values from Radio
 static uint8_t rssi;
+static bool isConnected;
 static uint32_t lastPacketTick;
+
+static volatile P2PCallback p2p_callback;
 
 static uint8_t key[16] = {(uint8_t) 0x1b, (uint8_t) 0x4f, (uint8_t) 0x9d, (uint8_t) 0x87, (uint8_t) 0x01, (uint8_t) 0x65, (uint8_t) 0x10, (uint8_t) 0xfd, (uint8_t) 0xab, (uint8_t) 0xcd, (uint8_t) 0x16, (uint8_t) 0xaf, (uint8_t) 0xe9, (uint8_t) 0x63, (uint8_t) 0x28, (uint8_t) 0xd5};
 
-bool match = false;
+bool match = false; // WICL addition
 
 static bool radiolinkIsConnected(void) {
   return (xTaskGetTickCount() - lastPacketTick) < M2T(RADIO_ACTIVITY_TIMEOUT_MS);
@@ -88,18 +96,19 @@ static struct crtpLinkOperations radiolinkOp =
   .receivePacket     = radiolinkReceiveCRTPPacket,
   .isConnected       = radiolinkIsConnected
 };
-static BLOWFISH_CTX ctx;
+
+static BLOWFISH_CTX ctx; // WICL use of blowfish.h
 
 void radiolinkInit(void)
 {
   if (isInit)
     return;
-  Blowfish_Init(&ctx, key, 16);
-  txQueue = xQueueCreate(RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
-  DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
-  crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
-  DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
+  Blowfish_Init(&ctx, key, 16); // WICL addition
+  txQueue = STATIC_MEM_QUEUE_CREATE(txQueue);
+  DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
+  crtpPacketDelivery = STATIC_MEM_QUEUE_CREATE(crtpPacketDelivery);
+  DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
   ASSERT(crtpPacketDelivery);
 
@@ -169,32 +178,47 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
-    xQueueSend(crtpPacketDelivery, &slp->length, 0);
-    ledseqRun(LINK_LED, seq_linkUp);
+    // Assert that we are not dropping any packets
+    ASSERT(xQueueSend(crtpPacketDelivery, &slp->length, 0) == pdPASS);
+    ledseqRun(&seq_linkUp);
     // If a radio packet is received, one can be sent
     if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)
     {
-      ledseqRun(LINK_DOWN_LED, seq_linkUp);
+      ledseqRun(&seq_linkDown);
       syslinkSendPacket(&txPacket);
     }
   } else if (slp->type == SYSLINK_RADIO_RAW_BROADCAST)
   {
     slp->length--; // Decrease to get CRTP size.
+    // broadcasts are best effort, so no need to handle the case where the queue is full
     xQueueSend(crtpPacketDelivery, &slp->length, 0);
-    ledseqRun(LINK_LED, seq_linkUp);
+    ledseqRun(&seq_linkUp);
     // no ack for broadcasts
   } else if (slp->type == SYSLINK_RADIO_RSSI)
-	{
-		//Extract RSSI sample sent from radio
-		memcpy(&rssi, slp->data, sizeof(uint8_t));
-	}
+  {
+    //Extract RSSI sample sent from radio
+    memcpy(&rssi, slp->data, sizeof(uint8_t)); //rssi will not change on disconnect
+  } else if (slp->type == SYSLINK_RADIO_P2P_BROADCAST)
+  {
+    ledseqRun(&seq_linkUp);
+    P2PPacket p2pp;
+    p2pp.port=slp->data[0];
+    p2pp.rssi = slp->data[1];
+    memcpy(&p2pp.data[0], &slp->data[2],slp->length-2);
+    p2pp.size=slp->length;
+    if (p2p_callback)
+        p2p_callback(&p2pp);
+  }
+
+  isConnected = radiolinkIsConnected();
 }
 
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
 {
   if (xQueueReceive(crtpPacketDelivery, p, M2T(100)) == pdTRUE)
   {
-	uint8_t bytes[]  = {(uint8_t)0x03, (uint8_t)0x05, (uint8_t)'\n'};
+    uint8_t bytes[]  = {(uint8_t)0x03, (uint8_t)0x05, (uint8_t)'\n'}; 
+    uint8_t data[16];
 
 	if(!match) {
 		bool m = true;
@@ -208,22 +232,27 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
 		return 0;
 	}
 
-	uint8_t data[16];
-
 	memcpy(data, &p->data[0], 16);
 	for(int i=0;i<2;i++)
     	Decrypt(&ctx, data+i*8);
 
 	for(int i = 0; i<16; i++)
 		p->data[i] = data[i];
+
 	return 0;
   }
   return -1;
 }
 
+void p2pRegisterCB(P2PCallback cb)
+{
+    p2p_callback = cb;
+}
+
 static int radiolinkSendCRTPPacket(CRTPPacket *p)
 {
   static SyslinkPacket slp;
+  uint8_t data[16];
 
   ASSERT(p->size <= CRTP_MAX_DATA_SIZE);
 
@@ -243,8 +272,6 @@ static int radiolinkSendCRTPPacket(CRTPPacket *p)
     p->size = 16;
   }
 
-  uint8_t data[16];
-
   memcpy(data, &p->data[0], 16);
   for(int i=0;i<2;i++)
       Encrypt(&ctx, data+(i*8));
@@ -262,6 +289,23 @@ static int radiolinkSendCRTPPacket(CRTPPacket *p)
   return false;
 }
 
+bool radiolinkSendP2PPacketBroadcast(P2PPacket *p)
+{
+  static SyslinkPacket slp;
+
+  ASSERT(p->size <= P2P_MAX_DATA_SIZE);
+
+  slp.type = SYSLINK_RADIO_P2P_BROADCAST;
+  slp.length = p->size + 1;
+  memcpy(slp.data, p->raw, p->size + 1);
+
+  syslinkSendPacket(&slp);
+  ledseqRun(&seq_linkDown);
+
+  return true;
+}
+
+
 struct crtpLinkOperations * radiolinkGetLink()
 {
   return &radiolinkOp;
@@ -273,5 +317,6 @@ static int radiolinkSetEnable(bool enable)
 }
 
 LOG_GROUP_START(radio)
-LOG_ADD(LOG_UINT8, rssi, &rssi)
+LOG_ADD_CORE(LOG_UINT8, rssi, &rssi)
+LOG_ADD_CORE(LOG_UINT8, isConnected, &isConnected)
 LOG_GROUP_STOP(radio)
