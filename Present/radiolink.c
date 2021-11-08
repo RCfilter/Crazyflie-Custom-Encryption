@@ -28,6 +28,8 @@
  * This file has been modified by the Wireless Innovation and Cybersecurity Lab of George Mason University
  * This project was overseen by Dr. Kai Zeng from the Department of Electrical and Computer Engineering
  * Contributing Members: David Rudo, Brandon Fogg, Thomas Lu, Matthew Chang, Yaqi He, Shrinath Iyer
+ * 
+ * Updated by the Secure Swarm UAV Systems team for use in Senior Advanced Design Project
  */
 
 #include <string.h>
@@ -48,18 +50,25 @@
 #include "led.h"
 #include "ledseq.h"
 #include "queuemonitor.h"
+#include "static_mem.h"
+#include "cfassert.h"
+
 
 #include "present.h"
 
 //#include "../init/main.c"
 
 #define RADIOLINK_TX_QUEUE_SIZE (1)
+#define RADIOLINK_CRTP_QUEUE_SIZE (5)
 #define RADIO_ACTIVITY_TIMEOUT_MS (1000)
 
-
+#define RADIOLINK_P2P_QUEUE_SIZE (5)
 
 static xQueueHandle  txQueue;
+STATIC_MEM_QUEUE_ALLOC(txQueue, RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
+
 static xQueueHandle crtpPacketDelivery;
+STATIC_MEM_QUEUE_ALLOC(crtpPacketDelivery, RADIOLINK_CRTP_QUEUE_SIZE, sizeof(CRTPPacket));
 
 static bool isInit;
 
@@ -69,6 +78,7 @@ static int radiolinkReceiveCRTPPacket(CRTPPacket *p);
 
 //Local RSSI variable used to enable logging of RSSI values from Radio
 static uint8_t rssi;
+static bool isConnected;
 static uint32_t lastPacketTick;
 
 //static uint8_t key[16] = {(uint8_t) 0x1b, (uint8_t) 0x4f, (uint8_t) 0x9d, (uint8_t) 0x87, (uint8_t) 0x01, (uint8_t) 0x65, (uint8_t) 0x10, (uint8_t) 0xfd, (uint8_t) 0xab, (uint8_t) 0xcd, (uint8_t) 0x16, (uint8_t) 0xaf, (uint8_t) 0xe9, (uint8_t) 0x63, (uint8_t) 0x28, (uint8_t) 0xd5};
@@ -94,9 +104,9 @@ void radiolinkInit(void)
   if (isInit)
     return;
   //memcpy(teaKey, &key[0], 16);
-  txQueue = xQueueCreate(RADIOLINK_TX_QUEUE_SIZE, sizeof(SyslinkPacket));
+  txQueue = STATIC_MEM_QUEUE_CREATE(txQueue);
   DEBUG_QUEUE_MONITOR_REGISTER(txQueue);
-  crtpPacketDelivery = xQueueCreate(5, sizeof(CRTPPacket));
+  crtpPacketDelivery = STATIC_MEM_QUEUE_CREATE(crtpPacketDelivery);
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
 
@@ -168,25 +178,28 @@ void radiolinkSyslinkDispatch(SyslinkPacket *slp)
   if (slp->type == SYSLINK_RADIO_RAW)
   {
     slp->length--; // Decrease to get CRTP size.
+    // Assert that we are not dropping any packets
     xQueueSend(crtpPacketDelivery, &slp->length, 0);
-    ledseqRun(LINK_LED, seq_linkup);
+    ledseqRun(&seq_linkUp);
     // If a radio packet is received, one can be sent
     if (xQueueReceive(txQueue, &txPacket, 0) == pdTRUE)
     {
-      ledseqRun(LINK_DOWN_LED, seq_linkup);
+      ledseqRun(&seq_linkDown);
       syslinkSendPacket(&txPacket);
     }
   } else if (slp->type == SYSLINK_RADIO_RAW_BROADCAST)
   {
     slp->length--; // Decrease to get CRTP size.
     xQueueSend(crtpPacketDelivery, &slp->length, 0);
-    ledseqRun(LINK_LED, seq_linkup);
+    ledseqRun(&seq_linkUp);
     // no ack for broadcasts
   } else if (slp->type == SYSLINK_RADIO_RSSI)
 	{
 		//Extract RSSI sample sent from radio
 		memcpy(&rssi, slp->data, sizeof(uint8_t));
 	}
+
+  isConnected = radiolinkIsConnected();
 }
 
 static int radiolinkReceiveCRTPPacket(CRTPPacket *p)
@@ -263,4 +276,5 @@ static int radiolinkSetEnable(bool enable)
 
 LOG_GROUP_START(radio)
 LOG_ADD(LOG_UINT8, rssi, &rssi)
+LOG_ADD_CORE(LOG_UINT8, isConnected, &isConnected)
 LOG_GROUP_STOP(radio)

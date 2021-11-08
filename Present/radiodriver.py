@@ -249,28 +249,32 @@ class RadioDriver(CRTPDriver):
 
         return devid, channel, datarate, address
 
-    def receive_packet(self, timee=0):
+    def receive_packet(self, time=0):
         """
         Receive a packet though the link. This call is blocking but will
         timeout and return None if a timeout is supplied.
         """
         global encrypt
-        if timee == 0:
+        if time == 0:
             try:
                 pk = self.in_queue.get(False)
             except queue.Empty:
                 return None
-        elif timee < 0:
+        elif time < 0:
             try:
                 pk = self.in_queue.get(True)
             except queue.Empty:
                 return None
         else:
             try:
-                pk = self.in_queue.get(True, timee**4)
+                pk = self.in_queue.get(True, time)
             except queue.Empty:
                 return None
-        
+
+        if len(pk._data) > 0:
+            print('\n---Data---\n')
+            print(pk._data)
+            print(len(pk._data))
         t = bytes(pk._data)
         d = bytes()
         if len(t) > 24:
@@ -296,7 +300,7 @@ class RadioDriver(CRTPDriver):
 	
     def send_packet(self, pk):
         """ Send the packet pk though the link """
-        global encrypt
+        global encrypt  
         if encrypt and pk.size < 24:
             pk.size = 24
         t = bytes(pk._data)
@@ -321,6 +325,8 @@ class RadioDriver(CRTPDriver):
             pk._data = bytearray(dec) + d
         else:
             pk._data = t + d
+        # if pk._data == b'\x03\x05\n':
+        #     encrypt = True 
         try:
             self.out_queue.put(pk, True, 2)
         except queue.Full:
