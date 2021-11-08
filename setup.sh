@@ -22,6 +22,7 @@ elif [ "$1" = "-b" -o "$1" = "--blowfish" ]; then
   cp -f Blowfish/blowfish.h Blowfish/radiolink.h $d"crazyflie-firmware/src/hal/interface"
   cp -f Blowfish/Makefile $d"crazyflie-firmware"
   cp -f Blowfish/radiodriver.py $d"crazyflie-lib-python/cflib/crtp/"
+  echo "Done."
 elif [ "$1" = "-p" -o "$1" = "--present" ]; then
   echo "Present Selected"
   echo "Adding proper configuration files..."
