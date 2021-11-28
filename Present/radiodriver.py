@@ -55,14 +55,14 @@ from cflib.crtp.crtpdriver import CRTPDriver
 from cflib.drivers.crazyradio import Crazyradio
 
 key_py = [int('1b4f', 16), int('9d87', 16), int('0165', 16), int('10fd', 16), int('abcd', 16)]
-
+ptk_py = [int('833D3433', 16), int('009F389F', 16), int('2398E64F', 16), int('417ACF39', 16)]
 key = (ctypes.c_ushort*5)(*key_py)
-
+ptk = (ctypes.c_uint32*4)(*ptk_py) # initialize the array from other Python object (key list)
 home = os.getenv("HOME")
-
 pres = ctypes.CDLL(home +'/projects/crazyflie-lib-python/cflib/crtp/libpres.so')
-
+chas = ctypes.CDLL(home +'/projects/crazyflie-lib-python/cflib/crtp/libchas.so')
 encrypt = False
+mac = False
 
 if sys.version_info < (3,):
     import Queue as queue
@@ -275,6 +275,7 @@ class RadioDriver(CRTPDriver):
             print('\n---Data---\n')
             print(pk._data)
             print(len(pk._data))
+            
         t = bytes(pk._data)
         d = bytes()
         if len(t) > 24:

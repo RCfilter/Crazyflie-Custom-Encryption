@@ -26,10 +26,15 @@ elif [ "$1" = "-b" -o "$1" = "--blowfish" ]; then
 elif [ "$1" = "-p" -o "$1" = "--present" ]; then
   echo "Present Selected"
   echo "Adding proper configuration files..."
-  cp -f Present/present.c Present/radiolink.c Present/Tables_4bit.inc $d"crazyflie-firmware/src/hal/src"
+  cp -f Present/present.c Present/radiolink.c Present/Tables_4bit.inc Present/chaskey.c $d"crazyflie-firmware/src/hal/src"
   cp -f Present/present.h Present/radiolink.h $d"crazyflie-firmware/src/hal/interface"
   cp -f Present/Makefile $d"crazyflie-firmware"
-  cp -f Present/radiodriver.py Present/present.c Present/libpres.so Present/Tables_4bit.inc $d"crazyflie-lib-python/cflib/crtp/"
+  cp -f Present/radiodriver.py Present/present.c Present/libpres.so Present/Tables_4bit.inc Present/chaskey.c Present/libchas.so $d"crazyflie-lib-python/cflib/crtp/"
+
+  # cp -f Present/chaskey.c $d"crazyflie-firmware/src/hal/src"
+  # cp -f Present/chaskey.c Present/libchas.so $d"crazyflie-lib-python/cflib/crtp/"
+  
+
   echo "Done."
 elif [ "$1" = "-x" -o "$1" = "--xtea" ]; then
   echo "XTEA Selected"

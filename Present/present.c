@@ -263,54 +263,54 @@
 }
 
 
-/*
-int main(void)
-{
-	#ifdef PRINT
-	uart1_init();
-#endif
-// Input values
-	u16 key[5]={0x0000,0x0000,0x0000,0x0000,0x0000};
-	u16 state[4]={0x0000,0x0000,0x0000,0x0000};
 
-	//Print state
-	printf("Plain text: ");
-	for(int i = 0; i < 4; i++)
-    {
-       printf("%x ", state[3 - i]);
-    }
-    printf("\n\n");
+// int main(void)
+// {
+// 	#ifdef PRINT
+// 	uart1_init();
+// #endif
+// // Input values
+// 	u16 key[5]={0x0000,0x0000,0x0000,0x0000,0x0000};
+// 	u16 state[4]={0x0000,0x0000,0x0000,0x0000};
 
-	//START_ENCRYPT();
+// 	//Print state
+// 	printf("Plain text: ");
+// 	for(int i = 0; i < 4; i++)
+//     {
+//        printf("%x ", state[3 - i]);
+//     }
+//     printf("\n\n");
 
-	Encrypt(state,key);
+// 	//START_ENCRYPT();
 
-	//Print state
-	printf("Cipher text: ");
-	for(int i = 0; i < 4; i++)
-    {
-       printf("%x ", state[3 - i]);
-    }
-    printf("\n\n");
+// 	Encrypt(state,key);
 
-	//START_DECRYPT();
+// 	//Print state
+// 	printf("Cipher text: ");
+// 	for(int i = 0; i < 4; i++)
+//     {
+//        printf("%x ", state[3 - i]);
+//     }
+//     printf("\n\n");
 
-	Decrypt(state,key);
+// 	//START_DECRYPT();
 
-	//Print state
-	printf("Plain text: ");
-	for(int i = 0; i < 4; i++)
-    {
-       printf("%x ", state[3 - i]);
-    }
-    printf("\n\n");
+// 	Decrypt(state,key);
+
+// 	//Print state
+// 	printf("Plain text: ");
+// 	for(int i = 0; i < 4; i++)
+//     {
+//        printf("%x ", state[3 - i]);
+//     }
+//     printf("\n\n");
 
 
-#ifdef PRINT
-	ps(state);
-	printf("\nFIN\n");
-#endif
+// #ifdef PRINT
+// 	ps(state);
+// 	printf("\nFIN\n");
+// #endif
 
-	//END_EXPE();
-	return 0;
-}*/
+// 	//END_EXPE();
+// 	return 0;
+// }
